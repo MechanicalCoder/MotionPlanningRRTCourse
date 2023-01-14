@@ -56,10 +56,10 @@ root.children.append(point)
 root.children[0].children.append(point2)
 
 #TODO: set the parent of point (what will it be?)-----------------
-
+point.parent = root
 
 #TODO: set the parent of point2 (what will it be?)----------------
-
+point2.parent = point
 
 #traverse the entire tree (recursion)
 def traverseTree(root):

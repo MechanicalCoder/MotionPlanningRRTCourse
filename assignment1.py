@@ -32,15 +32,18 @@ class RRTAlgorithm():
         
     #add the node to the nearest node, and add goal if necessary (TODO--------)    
     def addChild(self, locationX, locationY):
-        if (locationX == self.goal.locationX):
+        if (locationX == self.goal.locationX and locationY == self.goal.locationY):
             #append goal to nearestNode's children
             #and set goal's parent to nearestNode
-            pass #delete this when you're done
+            self.nearestNode.children.append(self.goal)
+            self.goal.parent = self.nearestNode
         else:
             #create a tree node from locationX, locationY
             #append this node to nearestNode's children
             #set the parent to nearestNode
-            pass #delete this when you're done
+            newNode = treeNode(locationX, locationY)
+            self.nearestNode.children.append(newNode)
+            newNode.parent = self.nearestNode
         
     #sample random point within grid limits (DONE)
     def sampleAPoint(self):
@@ -54,7 +57,7 @@ class RRTAlgorithm():
         offset = self.rho*self.unitVector(locationStart, locationEnd)
         point = np.array([locationStart.locationX + offset[0], locationStart.locationY + offset[1]])
         if point[0] >= grid.shape[1]:
-            point[0] = grid.shape[1]-1
+            point[0] = grid.shape[1]-1 # why 1?
         if point[1] >= grid.shape[0]:
             point[1] = grid.shape[0]-1
         return point
@@ -66,7 +69,8 @@ class RRTAlgorithm():
         for i in range(self.rho):
             testPoint[0] = min(grid.shape[1]-1, locationStart.locationX + i*u_hat[0])
             testPoint[1] = min(grid.shape[0]-1,locationStart.locationY + i*u_hat[1])
-            if self.grid[round(testPoint[1]).astype(np.int64),round(testPoint[0]).astype(np.int64)] == 1:
+            #if self.grid[round(testPoint[1]).astype(np.int64),round(testPoint[0]).astype(np.int64)] == 1:
+            if self.grid[round(testPoint[1]),round(testPoint[0])] == 1:
                 return True
         return False
 
@@ -84,25 +88,33 @@ class RRTAlgorithm():
         #if it's lower than or equal to nearestDist then
         #update nearestNode to root
         #update nearestDist to the distance from line 84
+        distHere = self.distance(root, point)
+        if(distHere < self.nearestDist):
+            self.nearestNode = root
+            self.nearestDist = distHere
         for child in root.children:
             self.findNearest(child, point)
 
     #find euclidean distance between a node object and an XY point (TODO--------)
     def distance(self, node1, point):
         #dist = complete this and uncomment after
+        dist = np.sqrt((node1.locationX - point[0])**2 + (node1.locationY - point[1])**2)
         return dist
     
     #check if the goal is within stepsize (rho) distance from point, return true if so otherwise false (TODO--------)
     def goalFound(self,point):
-        pass #delete this when you're done
+        if(self.distance(self.goal,point) <= self.rho):
+            return True
+        else:
+            return False
     
     #reset: set nearestNode to None and nearestDistance to 10000 (TODO--------)
     def resetNearestValues(self):
-        pass #delete this when you're done
+        self.nearestNode = None
+        self.nearestDist = 10000
         
     #trace the path from goal to start (TODO--------)
-    def retraceRRTPath(self,goal):
-        
+    def retraceRRTPath(self,goal):   
         if goal.locationX == self.randomTree.locationX:
             return
         
@@ -110,7 +122,10 @@ class RRTAlgorithm():
         #extract the X Y location of goal in a numpy array 
         #insert this array to waypoints (from the beginning)
         #add rho to path_distance
-        
+        self.numWaypoints += 1
+        p1 = np.array([goal.locationX, goal.locationY])
+        self.Waypoints.insert(0,p1)
+        self.path_distance += self.rho
         self.retraceRRTPath(goal.parent)   
 
         
@@ -141,23 +156,28 @@ plt.pause(2)
 #RRT algorithm (TODO-------)
 #iterate
 for i in range(rrt.iterations):
-    #Reset nearest values, call the resetNearestValues method
+    rrt.resetNearestValues()
     print("Iteration: ",i)
     #algorithm begins here-------------------------------------------------------------------------------
     
     #sample a point (use the appropriate method, store the point in variable)- call this variable 'point' to match Line 151
-
+    point = rrt.sampleAPoint()
     #find the nearest node w.r.t to the point (just call the method do not return anything)
+    rrt.findNearest(rrt.randomTree,point)
     new = rrt.steerToPoint(rrt.nearestNode, point) #steer to a point, return as 'new'
     #if not in obstacle
     if not rrt.isInObstacle(rrt.nearestNode, new):
         #add new to the nearestnode (addChild), again no need to return just call the method
+        rrt.addChild(new[0], new[1])
         plt.pause(0.10)
         plt.plot([rrt.nearestNode.locationX, new[0]], [rrt.nearestNode.locationY, new[1]],'go', linestyle="--")  
         #if goal found (new is within goal region)
         if (rrt.goalFound(new)):
             #append goal to path
             #retrace
+            rrt.addChild(goal[0],goal[1])
+            rrt.retraceRRTPath(rrt.goal)
+            print("Goal Found!")
             break
 
 #-----------------------------------------------------------------------------------------------------------------------------#
@@ -172,3 +192,5 @@ print("Waypoints: ", rrt.Waypoints)
 for i in range(len(rrt.Waypoints)-1):
     plt.plot([rrt.Waypoints[i][0], rrt.Waypoints[i+1][0]], [rrt.Waypoints[i][1], rrt.Waypoints[i+1][1]],'ro', linestyle="--")
     plt.pause(0.10)
+    
+plt.show()
